@@ -8,6 +8,9 @@ class Docker:
     def stop_dependency(self):
         self._run("docker", "stop", self.dependency)
 
+    def kill_dependency(self):
+        self._run("docker", "kill", self.dependency)
+
     def start_dependency(self):
         self._run("docker", "start", self.dependency)
 

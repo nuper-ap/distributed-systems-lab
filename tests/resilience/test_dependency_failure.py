@@ -58,3 +58,28 @@ def test_api_recovers_when_dependency_restarts(docker, api):
 
     assert status == 200
     assert body["status"] == "ok"
+
+def test_api_recovers_from_hard_dependency_failure(docker, api):
+    # Establish healthy state.
+    status, body = api.dependency()
+
+    assert status == 200
+    assert body["status"] == "ok"
+
+    # Kill the dependency without giving it a chance to shut down gracefully.
+    docker.kill_dependency()
+
+    # The API should eventually detect the failure.
+    wait_for(
+        lambda: api.dependency()[0] == 503,
+        timeout=10,
+    )
+
+    # Restore the dependency.
+    docker.start_dependency()
+
+    # The API should eventually recover.
+    wait_for(
+        lambda: api.dependency()[0] == 200,
+        timeout=10,
+    )
