@@ -14,6 +14,24 @@ class Docker:
     def start_dependency(self):
         self._run("docker", "start", self.dependency)
 
+    def disconnect_dependency(self):
+        self._run(
+            "docker",
+            "network",
+            "disconnect",
+           "lab-network",
+           self.dependency,
+        )
+
+    def connect_dependency(self):
+        self._run(
+            "docker",
+            "network",
+            "connect",
+            "lab-network",
+            self.dependency,
+        )
+
     def dependency_running(self):
         result = self._run(
             "docker",

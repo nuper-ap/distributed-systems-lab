@@ -14,7 +14,6 @@ def docker():
 
     yield docker
 
-    # Always leave the environment healthy for the next test.
     if not docker.dependency_running():
         docker.start_dependency()
 
@@ -25,61 +24,50 @@ def api():
 
 
 def test_api_recovers_when_dependency_restarts(docker, api):
-    # Establish the initial healthy state.
-    status, body = api.dependency()
+    assert api.dependency_is_healthy()
 
-    assert status == 200
-    assert body["status"] == "ok"
-
-    # Inject the failure.
     docker.stop_dependency()
 
-    # The system should eventually observe the dependency failure.
-    wait_for(
-        lambda: api.dependency()[0] == 503,
-        timeout=10,
-    )
+    wait_for(api.dependency_is_unavailable)
 
-    status, body = api.dependency()
+    assert api.dependency_is_unavailable()
 
-    assert status == 503
-    assert body["status"] == "error"
-
-    # Restore the dependency.
     docker.start_dependency()
 
-    # The API should eventually recover.
-    wait_for(
-        lambda: api.dependency()[0] == 200,
-        timeout=10,
-    )
+    wait_for(api.dependency_is_healthy)
 
-    status, body = api.dependency()
+    assert api.dependency_is_healthy()
 
-    assert status == 200
-    assert body["status"] == "ok"
 
 def test_api_recovers_from_hard_dependency_failure(docker, api):
-    # Establish healthy state.
-    status, body = api.dependency()
+    assert api.dependency_is_healthy()
 
-    assert status == 200
-    assert body["status"] == "ok"
-
-    # Kill the dependency without giving it a chance to shut down gracefully.
     docker.kill_dependency()
 
-    # The API should eventually detect the failure.
-    wait_for(
-        lambda: api.dependency()[0] == 503,
-        timeout=10,
-    )
+    wait_for(api.dependency_is_unavailable)
 
-    # Restore the dependency.
+    assert api.dependency_is_unavailable()
+
     docker.start_dependency()
 
-    # The API should eventually recover.
-    wait_for(
-        lambda: api.dependency()[0] == 200,
-        timeout=10,
-    )
+    wait_for(api.dependency_is_healthy)
+
+    assert api.dependency_is_healthy()
+
+
+def test_api_recovers_from_network_failure(docker, api):
+    assert api.dependency_is_healthy()
+
+    docker.disconnect_dependency()
+
+    assert docker.dependency_running()
+
+    wait_for(api.dependency_is_unavailable)
+
+    assert api.dependency_is_unavailable()
+
+    docker.connect_dependency()
+
+    wait_for(api.dependency_is_healthy)
+
+    assert api.dependency_is_healthy()

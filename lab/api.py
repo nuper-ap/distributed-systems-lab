@@ -13,6 +13,14 @@ class Api:
     def health(self):
         return self._get("/health")
 
+    def dependency_is_healthy(self):
+        status, body = self.dependency()
+        return status == 200 and body.get("status") == "ok"
+
+    def dependency_is_unavailable(self):
+        status, body = self.dependency()
+        return status == 503 and body.get("status") == "error"
+
     def _get(self, path):
         try:
             response = urlopen(
